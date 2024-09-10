@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "lorawan.h": "c",
+        "ff.h": "c"
+    }
+}

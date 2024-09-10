@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.12)
 # note: this must happen before project()
 include(pico_sdk_import.cmake)
 
-project(pico_lorawan)
+project(pico_lorawan C CXX)
 
 # initialize the Pico SDK
 pico_sdk_init()
@@ -122,8 +122,13 @@ target_include_directories(pico_lorawan INTERFACE
 
 target_link_libraries(pico_lorawan INTERFACE pico_loramac_node)
 
-add_subdirectory("examples/default_dev_eui")
-add_subdirectory("examples/erase_nvm")
-add_subdirectory("examples/hello_abp")
-add_subdirectory("examples/hello_otaa")
-add_subdirectory("examples/otaa_temperature_led")
+add_subdirectory("examples/current_voltage_sensor")
+add_subdirectory(pico-ssd1306)
+# add_subdirectory(no-OS-FatFS-SD-SDIO-SPI-RPi-Pico/src)
+
+target_link_libraries(pico_lorawan INTERFACE pico_loramac_node 
+    pico_ssd1306 
+    # no-OS-FatFS-SD-SDIO-SPI-RPi-Pico
+    hardware_i2c)
+
+

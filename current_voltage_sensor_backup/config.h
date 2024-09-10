@@ -10,13 +10,19 @@
 #define LORAWAN_REGION          LORAMAC_REGION_US915
 
 // LoRaWAN Device EUI (64-bit), NULL value will use Default Dev EUI
-#define LORAWAN_DEVICE_EUI      "0000000000000000"
+#define LORAWAN_DEVICE_EUI      "70B3D57ED006821A"
+// end node 1- 70B3D57ED006821A
+// end node 2 - 70B3D57ED006817E
 
 // LoRaWAN Application / Join EUI (64-bit)
-#define LORAWAN_APP_EUI         "0000000000000000"
+#define LORAWAN_APP_EUI         "F13DD0FA2619B115"
+// end node 1 - F13DD0FA2619B115
+// end node- 2 - F13DD0FA2619B104
 
 // LoRaWAN Application Key (128-bit)
-#define LORAWAN_APP_KEY         "00000000000000000000000000000000"
+#define LORAWAN_APP_KEY         "F3694F135D1221C34020C67A3E455245"
+// end node 1 - F3694F135D1221C34020C67A3E455245
+// end node 2- 00DB4BDE1A6C1DD3ED9621E1C003AAD7
 
 // LoRaWAN Channel Mask, NULL value will use the default channel mask 
 // for the region
