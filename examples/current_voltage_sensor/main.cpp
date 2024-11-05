@@ -48,7 +48,8 @@ uint8_t receive_port = 0;
 void current_voltage_init();
 double current_get(uint num_samples, double current_calibration, double offset_current, double *current_samples);
 double voltage_get(uint num_samples, double voltage_calibration, double offset_voltage, double *voltage_samples);
-double calculate_power(double *voltage_samples, double *current_samples, uint num_samples);
+double calculate_power(double *voltage_samples, double *current_samples, uint num_samples, 
+                                      double voltage_calibration, double current_calibration);
 double calculate_apparent_power(double voltage_rms, double current_rms);
 double calculate_reactive_power(double apparent_power, double active_power);
 double calculate_power_factor(double active_power, double apparent_power);
@@ -118,13 +119,16 @@ int main(void)
 
     uint num_samples = 10000;
     double current_calibration =  51.61;
-    double voltage_calibration =  1051.8;
+    double voltage_calibration =  897.6;
     double offset_current = ADC_COUNTS >> 1;
     double offset_voltage = ADC_COUNTS >> 1;
 
     char current_str[16];
     char voltage_str[16];
     char power_str[16];
+    char apparent_power_str[16];
+    char reactive_power_str[16];
+    char power_factor_str[16];
 
     double current_samples[num_samples];
     double voltage_samples[num_samples];
@@ -134,13 +138,13 @@ int main(void)
         lorawan_process();
         double adc_current_rms = current_get(num_samples, current_calibration, offset_current, current_samples);
         double adc_voltage_rms = voltage_get(num_samples, voltage_calibration, offset_voltage, voltage_samples);
-        double active_power = calculate_power(voltage_samples, current_samples, num_samples);
+        double active_power =  calculate_power(voltage_samples, current_samples, num_samples, voltage_calibration, current_calibration);
         double apparent_power = calculate_apparent_power(adc_voltage_rms, adc_current_rms);
         double reactive_power = calculate_reactive_power(apparent_power, active_power);
         double power_factor = calculate_power_factor(active_power, apparent_power);
 
         if (lorawan_connected) {
-            printf("Current: %0.2f A, Voltage: %0.2f V, Power: %0.2f W, Apparent Power: %0.2f VA, Reactive Power: %0.2f VAR, Power Factor: %0.2f\n", adc_current_rms, adc_voltage_rms, active_power, apparent_power, reactive_power, power_factor);
+            printf("Current: %0.2f A, Voltage: %0.2f V, Real Power: %0.2f W, Apparent Power: %0.2f VA, Reactive Power: %0.2f VAR, Power Factor: %0.2f\n", adc_current_rms, adc_voltage_rms, active_power, apparent_power, reactive_power, power_factor);
         }
 
         uint8_t payload[48];
@@ -167,16 +171,19 @@ int main(void)
         // Update display with sensor values
         display.clear();
 
-        sprintf(current_str, "%0.2f A", adc_current_rms);
-        sprintf(voltage_str, "%0.2f V", adc_voltage_rms);
-        sprintf(power_str, "%0.2f W", apparent_power);
+        sprintf(current_str, "I: %0.2f A", adc_current_rms);
+        sprintf(voltage_str, "V: %0.2f V", adc_voltage_rms);
+        sprintf(power_str, "P: %0.2f W", active_power);
+        sprintf(apparent_power_str, "S: %0.2f VA", apparent_power);
+        sprintf(reactive_power_str, "Q: %0.2f VAR", reactive_power);
+        sprintf(power_factor_str, "PF: %0.2f", power_factor);
         
-        drawText(&display, font_8x8, "Current:", 0, 0);
-        drawText(&display, font_8x8, current_str, 0, 8);
-        drawText(&display, font_8x8, "Voltage:", 0, 16);
-        drawText(&display, font_8x8, voltage_str, 0, 24);
-        drawText(&display, font_8x8, "Power:", 0, 32);
-        drawText(&display, font_8x8, power_str, 0, 40);
+        drawText(&display, font_8x8, current_str, 0, 0);
+        drawText(&display, font_8x8, voltage_str, 0, 8);
+        drawText(&display, font_8x8, power_str, 0, 16);
+        drawText(&display, font_8x8, apparent_power_str, 0, 24);
+        drawText(&display, font_8x8, reactive_power_str, 0, 32);
+        drawText(&display, font_8x8, power_factor_str, 0, 40);
         display.sendBuffer();
 
         if (lorawan_process_timeout_ms(1480) == 0 && lorawan_connected) {
@@ -240,11 +247,21 @@ double voltage_get(uint num_samples, double voltage_calibration, double offset_v
     return voltage_rms;
 }
 
-double calculate_power(double *voltage_samples, double *current_samples, uint num_samples) {
+//Active Power Is calculated by taking the average of instantaneous power values over time. This automatically accounts for any phase difference between voltage and current.
+//For each sample, multiply instantaneous voltage by instantaneous current. Take the average of all these products
+
+double calculate_power(double *voltage_samples, double *current_samples, uint num_samples, 
+                       double voltage_calibration, double current_calibration) {
     double sum_power = 0;
+    double voltage_ratio = voltage_calibration * ((SUPPLY_VOLTAGE / 1000.0) / ADC_COUNTS);
+    double current_ratio = current_calibration * ((SUPPLY_VOLTAGE / 1000.0) / ADC_COUNTS);
+
     for (uint sample = 0; sample < num_samples; sample++) {
-        sum_power += voltage_samples[sample] * current_samples[sample];
+        double calibrated_voltage = voltage_samples[sample] * voltage_ratio;
+        double calibrated_current = current_samples[sample] * current_ratio;
+        sum_power += calibrated_voltage * calibrated_current;
     }
+    
     return sum_power / num_samples;
 }
 
